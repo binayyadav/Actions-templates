@@ -1,0 +1,67 @@
+name: Class Length Action
+
+on:
+  pull_request:
+    branches: [ dev ]
+    
+jobs:
+  check:
+    defaults:
+      run:
+        working-directory: ./Backend/src/main
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v2
+    - name: Set up JDK 1.8
+      uses: actions/setup-java@v1
+      with:
+       java-version: 1.8
+    - name: Files having 500+ lines
+      run: git ls-files | xargs wc -l | sort -rn | awk '$1 > 500'
+    - name: Check class file length - Backend 
+      id: line_count
+      run : echo ::set-output name=key::$(git ls-files | xargs wc -l | sort -r | awk '$1 > 500'| tail -n +2 | wc -l)
+    - name: Count of files having 500+ lines
+      if: steps.line_count.outputs.key > 0
+      run: |
+       echo "THE CLASSES LISTED CROSS THE MAXIMUM ALLOWED LIMIT"
+       end task
+  build:
+     runs-on: ubuntu-latest
+     env:
+      server_address:  smtp.gmail.com
+      server_port: 465
+      username: gitnotification.lattice@gmail.com
+      password: Lattice@123
+      subject: Github Actions/Class length - ${{ github.event.repository.name }}
+      to: vikrant@thelattice.in
+      from: gitnotification.lattice@gmail.com
+      content_type: text/html
+     needs: check
+     steps:
+      - name: Checks passed - Pull Request
+        if: github.event_name != 'push'
+        uses: dawidd6/action-send-mail@v2
+        with:
+          server_address: ${{env.server_address}}
+          server_port: ${{env.server_port}}
+          username: ${{env.username}}
+          password: ${{env.password}}
+          subject: ${{env.subject}}
+          body: Build job of the pull request - https://github.com/raosamriddha/actions_demo/pull/${{ github.event.number }} created by - ${{ github.event.pull_request.user.login }} completed successfully!
+          to: ${{env.to}}
+          from: ${{env.from}}
+          content_type: ${{env.content_type}}
+      - name: Checks passed - Push
+        if: github.event_name == 'push' 
+        uses: dawidd6/action-send-mail@v2
+        with:
+          server_address: ${{env.server_address}}
+          server_port: ${{env.server_port}}
+          username: ${{env.username}}
+          password: ${{env.password}}
+          subject: ${{env.subject}}
+          body: Build job of the latest commit completed successfully!
+          to: ${{env.to}}
+          from: ${{env.from}}
+          content_type: ${{env.content_type}}
